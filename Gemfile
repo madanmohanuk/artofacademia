@@ -7,3 +7,5 @@ source "https://rubygems.org"
 gem "jekyll"
 gem 'bootstrap', '~> 5.3.2'
 gem "webrick", "~> 1.8"
+gem 'jekyll-sitemap'
+gem "jekyll-seo-tag"

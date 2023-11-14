@@ -1,0 +1,10 @@
+# Info
+title: Art of Academia Podcast
+url: https://artofacademia.com/
+baseurl: ''
+
+plugins:
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+
