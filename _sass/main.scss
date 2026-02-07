@@ -23,7 +23,9 @@ h2 {
 }
 
 .platform-icon {
-  height: 38px;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
   transition: opacity 0.2s;
 }
 
