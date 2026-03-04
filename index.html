@@ -40,9 +40,144 @@ title: Art of Academia Podcast
 <main>
   <section class="container episodes-section">
     <h2>Episodes</h2>
-    <script src="https://static.elfsight.com/platform/platform.js" data-use-service-core defer></script>
-    <div class="elfsight-app-40acb98b-6fac-4761-a964-9dddd7bb0256" data-elfsight-app-lazy></div>
+    <div id="episodes-loading" class="episodes-loading" aria-live="polite">
+      <div class="episodes-spinner" aria-hidden="true"></div>
+      <p>Loading episodes&hellip;</p>
+    </div>
+    <div id="episodes-error" class="episodes-error" hidden>
+      <p>Unable to load episodes. <a href="https://anchor.fm/artofacademia" target="_blank" rel="noopener noreferrer">Listen on Anchor</a></p>
+    </div>
+    <div id="episodes-grid" class="episodes-grid" hidden></div>
   </section>
+  <script>
+  (function () {
+    'use strict';
+
+    var loading = document.getElementById('episodes-loading');
+    var error   = document.getElementById('episodes-error');
+    var grid    = document.getElementById('episodes-grid');
+
+    fetch('/assets/data/feed.xml')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (xmlText) {
+        var doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+        var items = Array.from(doc.querySelectorAll('item'));
+        if (!items.length) throw new Error('No episodes');
+
+        var channelImage =
+          (doc.querySelector('channel > image > url') || {}).textContent ||
+          '/assets/images/podcast-logo.jpeg';
+
+        var fragment = document.createDocumentFragment();
+        items.forEach(function (item) {
+          fragment.appendChild(buildCard(item, channelImage));
+        });
+
+        grid.appendChild(fragment);
+        loading.hidden = true;
+        grid.hidden = false;
+      })
+      .catch(function () {
+        loading.hidden = true;
+        error.hidden = false;
+      });
+
+    function buildCard(item, fallbackImg) {
+      var title = getText(item, 'title') || 'Untitled Episode';
+      var rawDesc =
+        getTextNS(item, 'http://www.itunes.com/dtds/podcast-1.0.dtd', 'summary') ||
+        getText(item, 'description') || '';
+      var description = stripHtml(rawDesc);
+      var pubDate = getText(item, 'pubDate');
+      var dateDisplay = pubDate ? formatDate(pubDate) : '';
+
+      var itunesImage = item.getElementsByTagNameNS(
+        'http://www.itunes.com/dtds/podcast-1.0.dtd', 'image')[0];
+      var imgSrc = (itunesImage && itunesImage.getAttribute('href')) || fallbackImg;
+
+      var enclosure = item.querySelector('enclosure');
+      var audioUrl = enclosure ? enclosure.getAttribute('url') : null;
+
+      var epNum = getTextNS(item, 'http://www.itunes.com/dtds/podcast-1.0.dtd', 'episode');
+
+      var card = document.createElement('article');
+      card.className = 'episode-card';
+
+      var thumb = document.createElement('div');
+      thumb.className = 'episode-thumb';
+      var img = document.createElement('img');
+      img.src = imgSrc;
+      img.alt = title;
+      img.loading = 'lazy';
+      thumb.appendChild(img);
+      card.appendChild(thumb);
+
+      var body = document.createElement('div');
+      body.className = 'episode-body';
+
+      var meta = document.createElement('p');
+      meta.className = 'episode-meta';
+      meta.textContent = [epNum ? 'Ep. ' + epNum : '', dateDisplay]
+        .filter(Boolean).join(' \u00b7 ');
+
+      var h3 = document.createElement('h3');
+      h3.className = 'episode-title';
+      h3.textContent = title;
+
+      var desc = document.createElement('p');
+      desc.className = 'episode-desc';
+      desc.textContent = description.length > 200
+        ? description.slice(0, 197) + '\u2026'
+        : description;
+
+      body.appendChild(meta);
+      body.appendChild(h3);
+      body.appendChild(desc);
+
+      if (audioUrl) {
+        var audio = document.createElement('audio');
+        audio.controls = true;
+        audio.preload = 'none';
+        audio.className = 'episode-player';
+        var source = document.createElement('source');
+        source.src = audioUrl;
+        source.type = 'audio/mpeg';
+        audio.appendChild(source);
+        body.appendChild(audio);
+      }
+
+      card.appendChild(body);
+      return card;
+    }
+
+    function getText(el, tag) {
+      var node = el.querySelector(tag);
+      return node ? node.textContent.trim() : '';
+    }
+
+    function getTextNS(el, ns, local) {
+      var nodes = el.getElementsByTagNameNS(ns, local);
+      return nodes.length ? nodes[0].textContent.trim() : '';
+    }
+
+    function stripHtml(html) {
+      var div = document.createElement('div');
+      div.innerHTML = html;
+      return (div.textContent || div.innerText || '').trim();
+    }
+
+    function formatDate(rfc2822) {
+      try {
+        return new Date(rfc2822).toLocaleDateString('en-GB', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+      } catch (e) { return rfc2822; }
+    }
+  }());
+  </script>
 </main>
 <footer class="footer-section">
   <p class="text-white text-center mb-0">&copy; {{ 'now' | date: '%Y' }} Art of Academia Podcast</p>

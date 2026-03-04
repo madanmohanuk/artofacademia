@@ -4,6 +4,8 @@ name: Deploy Jekyll site to Pages
 on:
   push:
     branches: ["master"]
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -21,6 +23,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Fetch podcast RSS feed
+        run: |
+          mkdir -p assets/data
+          curl -fsSL "https://anchor.fm/s/eb2002b0/podcast/rss" -o assets/data/feed.xml
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
