@@ -49,6 +49,18 @@ title: Art of Academia Podcast
     </div>
     <div id="episodes-grid" class="episodes-grid" hidden></div>
   </section>
+  <div id="episode-modal" class="episode-modal-overlay" hidden>
+    <div class="episode-modal" role="dialog" aria-modal="true">
+      <button class="episode-modal-close" aria-label="Close">&times;</button>
+      <img id="modal-image" class="episode-modal-image" src="" alt="">
+      <p id="modal-meta" class="episode-modal-meta"></p>
+      <h3 id="modal-title" class="episode-modal-title"></h3>
+      <p id="modal-desc" class="episode-modal-desc"></p>
+      <audio id="modal-audio" class="episode-modal-player" controls preload="none" hidden>
+        <source id="modal-source" src="" type="audio/mpeg">
+      </audio>
+    </div>
+  </div>
   <script>
   (function () {
     'use strict';
@@ -56,6 +68,52 @@ title: Art of Academia Podcast
     var loading = document.getElementById('episodes-loading');
     var error   = document.getElementById('episodes-error');
     var grid    = document.getElementById('episodes-grid');
+
+    // Modal elements
+    var modal      = document.getElementById('episode-modal');
+    var modalImage = document.getElementById('modal-image');
+    var modalMeta  = document.getElementById('modal-meta');
+    var modalTitle = document.getElementById('modal-title');
+    var modalDesc  = document.getElementById('modal-desc');
+    var modalAudio = document.getElementById('modal-audio');
+    var modalSrc   = document.getElementById('modal-source');
+    var modalClose = modal.querySelector('.episode-modal-close');
+
+    function openModal(data) {
+      modalImage.src = data.imgSrc;
+      modalImage.alt = data.title;
+      modalMeta.textContent = data.metaText;
+      modalTitle.textContent = data.title;
+      modalDesc.textContent = data.description;
+      if (data.audioUrl) {
+        modalSrc.src = data.audioUrl;
+        modalAudio.load();
+        modalAudio.hidden = false;
+      } else {
+        modalAudio.hidden = true;
+      }
+      modal.hidden = false;
+      requestAnimationFrame(function () { modal.classList.add('is-visible'); });
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.classList.remove('is-visible');
+      document.body.style.overflow = '';
+      setTimeout(function () {
+        modal.hidden = true;
+        modalAudio.pause();
+        modalSrc.src = '';
+      }, 250);
+    }
+
+    modalClose.addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !modal.hidden) closeModal();
+    });
 
     fetch('/assets/data/feed.xml')
       .then(function (res) {
@@ -102,9 +160,21 @@ title: Art of Academia Podcast
       var audioUrl = enclosure ? enclosure.getAttribute('url') : null;
 
       var epNum = getTextNS(item, 'http://www.itunes.com/dtds/podcast-1.0.dtd', 'episode');
+      var metaText = [epNum ? 'Ep. ' + epNum : '', dateDisplay]
+        .filter(Boolean).join(' \u00b7 ');
 
       var card = document.createElement('article');
       card.className = 'episode-card';
+
+      card.addEventListener('click', function () {
+        openModal({
+          title: title,
+          description: description,
+          imgSrc: imgSrc,
+          audioUrl: audioUrl,
+          metaText: metaText
+        });
+      });
 
       var thumb = document.createElement('div');
       thumb.className = 'episode-thumb';
@@ -120,8 +190,7 @@ title: Art of Academia Podcast
 
       var meta = document.createElement('p');
       meta.className = 'episode-meta';
-      meta.textContent = [epNum ? 'Ep. ' + epNum : '', dateDisplay]
-        .filter(Boolean).join(' \u00b7 ');
+      meta.textContent = metaText;
 
       var h3 = document.createElement('h3');
       h3.className = 'episode-title';
