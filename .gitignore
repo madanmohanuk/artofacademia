@@ -6,3 +6,8 @@ _site/
 .bundle/
 vendor/
 node_modules/
+# Podcast RSS feed is fetched at build time by the GitHub Actions workflow
+assets/data/
+
+# Browser automation logs
+.playwright-mcp/
